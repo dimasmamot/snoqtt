@@ -1,6 +1,12 @@
 FROM debian:9-slim
 
-ENV PROTECTED_SUBNET="10.252.111.0/24" EXTERNAL_SUBNET='!$HOME_NET' OINKCODE="a6e57f37417785ca9af06f735bb9fd89c6985dfe" MQTT="10.252.111.240" MQTTPORT=1883 NETINT="eth0" PUBLISHED_TOPIC="snoqttv4" DEVICE_ID="sensor-1" 
+ENV PROTECTED_SUBNET="10.252.111.0/24" \
+    EXTERNAL_SUBNET='!$HOME_NET' \
+    OINKCODE="a6e57f37417785ca9af06f735bb9fd89c6985dfe" \
+    MQTT="10.252.111.240" \
+    MQTTPORT=1883 NETINT="eth0" \
+    PUBLISHED_TOPIC="snoqttv3" \
+    DEVICE_ID="sensor-1" 
 
 # Instalasi package yang diperlukan melalui apt
 COPY require /root
@@ -27,8 +33,7 @@ RUN apt-get update && apt-get install -y \
 # File requirement yang dibutuhkan package python untuk menjalankan snort
 
 	pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
-	hash -r pip && \
-	pip3 install --no-cache-dir -r /root/requirements.txt &&\
+	pip3 install --no-cache-dir -r root/requirements.txt &&\
 
 # Membuat direktori untuk source file daq, snort dan pulledpork
 

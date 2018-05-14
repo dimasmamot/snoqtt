@@ -41,9 +41,13 @@ def ip6_to_str(address):
 
 def main():
     snort_message = {}
+    list_protocol = ["HOPOPT","ICMP","IGMP","GGP","IP-in-IP","ST","TCP","CBT","EGP","IGP","BBN-RCC-MON", "NVP-II","PUP","ARGUS","EMCON","EXNET","CHAOS","UDP","MUX","DCN-MEAS","HMP","PRM","XNS-IDP","TRUNK-1","TRUNK-2","LEAF-1","LEAF-2","RDP","IRTP","ISO-TP4","NETBLT","MFE-NSP","MERIT-INP","DCCP","3PC","IDPR","XTP","DDP","IDPR-CMTP","TP++","IL","IPv6","SDRP","IPv6-Route","IPv6-Frag","IDRP","RSVP","GREs","DSR","BNA","ESP","AH","I-NLSP","SWIPE","NARP","MOBILE","TLSP","SKIP","IPv6-ICMP","IPv6-NoNxt","IPv6-Opts","Host Internal Protocol","CFTP","Any Local Network","SAT-EXPAK","KRYPTOLAN","RVD","IPPC","Any Distributed File System","SAT-MON","VISA","IPCU","CPNX","CPHB","WSN","PVP","BR-SAT-MON","SUN-ND","WB-MON","WB-EXPAK","ISO-IP","VMTP","SECURE-VMTP","VINES","TTP/IPTMP","NSFNET-IGP","DGP","TCF","EIGRP","OSPF","Sprite-RPC","LARP","MTP","AX.25","OS","MICP","SCC-SP","ETHERIP","ENCAP","Any Private Encryption Scheme","GMTP","IFMP","PNNI","PIM","ARIS","SCPS","QNX","A/N","IPComp","SNP","Compaq-Peer","IPX-in-IP","VRRP","PGM","Any 0-hop Protocol","L2TP","DDX","IATP","STP","SRP","UTI","SMP","SM","PTP","IS-IS over IPv4","FIRE","CRTP","CRUDP","SSCOPMCE","IPLT","SPS","PIPE","SCTP","FC","RSVP-E2E-IGNORE","Mobility Header","UDPLite","MPLS-in-IP","manet","HIP","Shim6","WESP","ROHC","UNASSIGNED","EXPERIMENT","RESERVED"]
+
     for msg in snort_listener.start_recv("/var/log/snort/snort_alert"):
         orig_msg = b'.'.join(msg.alertmsg)
         am = (str(orig_msg, 'utf-8').replace("\u0000", "")).replace("'", "")
+
+        # Timestamp created when the rule generate alert
         snort_message["timestamp"] = str(time.time())
         snort_message["alert_msg"] = str(am)
         print('alertmsg: %s' % str(am))
@@ -62,7 +66,32 @@ def main():
         dest_mac = mac_addr(eth.dst)
 
         snort_message["src_mac"] = src_mac
-        snort_message["dest_mac"] = dest_mac	
+        snort_message["dest_mac"] = dest_mac
+
+        if eth.data.p == 255 :
+            snort_message["protocol"] = list_protocol[145]
+        elif eth.data.p <= 254 and eth.data.p >= 253 :
+            snort_message["protocol"] = list_protocol[144]
+        elif eth.data.p <= 252 and eth.data.p >= 143 :
+            snort_message["protocol"] = list_protocol[143]
+        else :
+            snort_message["protocol"] = list_protocol[eth.data.p]
+        
+        # Check the protocol, to handle protocol that didn't have dport/sport attribute
+
+        try:
+            eth.data.data.dport
+        except AttributeError:
+            snort_message["dst_port"] = 0
+        else:
+            snort_message["dst_port"] = eth.data.data.dport
+
+        try:
+            eth.data.data.sport
+        except AttributeError:
+            snort_message["src_port"] = 0
+        else:
+            snort_message["src_port"] = eth.data.data.sport
 
         print('Ethernet Frame: ', mac_addr(eth.src), mac_addr(eth.dst), eth.type)
 
@@ -72,7 +101,6 @@ def main():
             snort_message["ip_type"] = ip_type
 
             ip = eth.data
-
             src_ip = ip6_to_str(ip.src)
             dest_ip = ip6_to_str(ip.dst)
             len = ip.plen
